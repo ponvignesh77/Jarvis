@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS - Stark Industries HUD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #02060f;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 0 40px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #00f3ff;
+        }
+
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 99;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        .hud-wrapper {
+            position: relative;
+            width: 450px;
+            max-width: 92vw;
+            height: 450px;
+            max-height: 92vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .core {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #ffffff 0%, #00f3ff 50%, #0044ff 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 30px #00f3ff, 0 0 60px #00f3ff, inset 0 0 15px #ffffff;
+            animation: pulseCore 2s infinite ease-in-out;
+            z-index: 5;
+        }
+
+        @keyframes pulseCore {
+            0%, 100% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 20px #00f3ff, 0 0 40px #00f3ff; }
+            50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 40px #00f3ff, 0 0 80px #00f3ff; }
+        }
+
+        .ring { position: absolute; border-radius: 50%; border: 2px dashed rgba(0, 243, 255, 0.4); }
+
+        .ring-1 {
+            width: 160px; height: 160px;
+            border-color: rgba(0, 243, 255, 0.7);
+            border-width: 3px; border-style: solid;
+            border-top-color: transparent; border-bottom-color: transparent;
+            animation: rotateClockwise 6s linear infinite;
+        }
+        .ring-2 {
+            width: 240px; height: 240px;
+            border: 2px dotted rgba(0, 243, 255, 0.5);
+            animation: rotateCounterClockwise 10s linear infinite;
+        }
+        .ring-3 {
+            width: 330px; height: 330px;
+            border-width: 4px; border-style: solid;
+            border-color: rgba(0, 102, 255, 0.6) transparent rgba(0, 243, 255, 0.6) transparent;
+            animation: rotateClockwise 15s linear infinite;
+            box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+        .ring-4 {
+            width: 420px; height: 420px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-left-color: #00f3ff; border-right-color: #00f3ff;
+            animation: rotateCounterClockwise 20s linear infinite;
+        }
+
+        @keyframes rotateClockwise { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes rotateCounterClockwise { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+
+        .hud-text {
+            position: absolute;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(0, 243, 255, 0.8);
+            text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+        }
+        .top-left { top: 30px; left: 40px; }
+        .top-right { top: 30px; right: 40px; text-align: right; }
+        .bottom-left { bottom: 30px; left: 40px; }
+        .bottom-right { bottom: 30px; right: 40px; text-align: right; }
+
+        .status-banner {
+            position: absolute;
+            bottom: -60px;
+            font-size: 14px;
+            letter-spacing: 4px;
+            color: #ffffff;
+            text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+            animation: flicker 3s infinite;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 24%, 55% { opacity: 0.4; }
+        }
+
+        /* Control panel */
+        .panel {
+            width: min(450px, 92vw);
+            margin-top: 70px;
+            padding: 14px;
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            background: rgba(0, 16, 32, 0.7);
+            font-size: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .panel label { display: block; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; color: rgba(0, 243, 255, 0.7); }
+
+        .row { display: flex; gap: 8px; margin-top: 10px; }
+        .row > * { min-width: 0; }
+        .row .grow { flex: 1; }
+
+        input, button {
+            font-family: inherit;
+            font-size: 12px;
+            background: transparent;
+            color: #00f3ff;
+            border: 1px solid #00f3ff;
+            padding: 8px 10px;
+        }
+        input { width: 100%; }
+        input::placeholder { color: rgba(0, 243, 255, 0.4); }
+        button { cursor: pointer; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+        button:hover:not(:disabled), button.active { background: rgba(0, 243, 255, 0.2); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button:focus-visible, input:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+
+        #log {
+            height: 180px;
+            overflow-y: auto;
+            margin-top: 12px;
+            padding: 8px;
+            border-top: 1px solid rgba(0, 243, 255, 0.2);
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        #log .you { color: #ffffff; }
+        #log .jarvis { color: #00f3ff; }
+        #log .system { color: rgba(0, 243, 255, 0.5); font-style: italic; }
+
+        .hint { margin-top: 10px; font-size: 10px; color: rgba(0, 243, 255, 0.5); line-height: 1.4; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hud-wrapper">
+        <div class="hud-text top-left">SYS.ON // v4.0.2<br>POWER: 98.4%</div>
+        <div class="hud-text top-right">STARK INDUSTRIES<br>SECURE_LINK: ACTIVE</div>
+        <div class="hud-text bottom-left">DIAG: OPTIMAL<br>CPU: 1.2 THz</div>
+        <div class="hud-text bottom-right">TARGET: LOCKED<br>GRID: SECURE</div>
+
+        <div class="ring ring-4"></div>
+        <div class="ring ring-3"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-1"></div>
+        <div class="core"></div>
+
+        <div class="status-banner" id="statusText">JARVIS ONLINE</div>
+    </div>
+
+    <section class="panel" aria-label="JARVIS controls">
+        <label for="apiKey">Gemini API key</label>
+        <input id="apiKey" type="password" placeholder="Paste your key (not saved)" autocomplete="off">
+
+        <div class="row">
+            <div class="grow">
+                <label for="model">Model</label>
+                <input id="model" type="text" value="gemini-2.0-flash" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="row">
+            <button id="btnStart" class="grow">Activate JARVIS</button>
+            <button id="btnMute" disabled>Mute</button>
+            <button id="btnListen" disabled>Listen</button>
+        </div>
+
+        <div class="row">
+            <input id="textInput" type="text" placeholder="Type a command or question" autocomplete="off">
+            <button id="btnSend">Send</button>
+        </div>
+
+        <div id="log" aria-live="polite"></div>
+
+        <p class="hint">Voice commands: "status report", "what time is it", "mute", "unmute", "stop". Anything else goes to Gemini. A web page cannot control phone hardware or other apps. See the note in chat.</p>
+    </section>
+
+    <script>
+        const statuses = ["JARVIS ONLINE", "ANALYZING PROTOCOLS", "DEFENSE GRID ACTIVE", "ALL SYSTEMS NOMINAL"];
+        const statusEl = document.getElementById("statusText");
+        const logEl = document.getElementById("log");
+        const btnStart = document.getElementById("btnStart");
+        const btnMute = document.getElementById("btnMute");
+        const btnListen = document.getElementById("btnListen");
+        const btnSend = document.getElementById("btnSend");
+        const apiKeyEl = document.getElementById("apiKey");
+        const modelEl = document.getElementById("model");
+        const textInput = document.getElementById("textInput");
+
+        const synth = window.speechSynthesis || null;
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+        let active = false;
+        let muted = false;
+        let voice = null;
+        let recognition = null;
+        let listening = false;
+        let statusIndex = 0;
+        let statusTimer = null;
+
+        function pickVoice() {
+            if (!synth) return;
+            const voices = synth.getVoices();
+            voice = voices.find(v => /en-GB/i.test(v.lang) && /male|daniel|george/i.test(v.name))
+                 || voices.find(v => /en-GB/i.test(v.lang))
+                 || voices.find(v => /^en/i.test(v.lang))
+                 || null;
+        }
+        if (synth) {
+            pickVoice();
+            synth.onvoiceschanged = pickVoice;
+        }
+
+        function log(who, text) {
+            const line = document.createElement("div");
+            line.className = who === "JARVIS" ? "jarvis" : who === "YOU" ? "you" : "system";
+            line.textContent = `${who}: ${text}`;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function speak(text) {
+            log("JARVIS", text);
+            if (muted || !synth) return;
+            synth.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            if (voice) u.voice = voice;
+            u.pitch = 0.85;
+            u.rate = 1.0;
+            synth.speak(u);
+        }
+
+        function setMuted(value) {
+            muted = value;
+            btnMute.textContent = muted ? "Unmute" : "Mute";
+            btnMute.classList.toggle("active", muted);
+            if (muted && synth) synth.cancel();
+        }
+
+        function cycleStatus() {
+            statusIndex = (statusIndex + 1) % statuses.length;
+            statusEl.style.opacity = 0;
+            setTimeout(() => {
+                statusEl.textContent = statuses[statusIndex];
+                statusEl.style.opacity = 1;
+            }, 300);
+        }
+
+        function activate() {
+            if (active) return;
+            active = true;
+            btnStart.textContent = "JARVIS Active";
+            btnStart.classList.add("active");
+            btnMute.disabled = false;
+            btnListen.disabled = !SR;
+            if (!SR) btnListen.title = "Voice input is not supported in this browser";
+            statusTimer = setInterval(cycleStatus, 4000);
+            speak("JARVIS online. How may I assist you?");
+        }
+
+        function runStatusReport() {
+            const current = statusEl.textContent.toLowerCase();
+            speak(`Power at 98 point 4 percent. Current state: ${current}. Diagnostics optimal.`);
+        }
+
+        function handleCommand(raw) {
+            const text = raw.trim();
+            if (!text) return;
+            log("YOU", text);
+            const t = text.toLowerCase();
+
+            if (/\b(status|all systems|diagnostic)\b/.test(t)) return runStatusReport();
+            if (/what time/.test(t)) {
+                return speak(`It is ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`);
+            }
+            if (/^(mute|be quiet|silence)\b/.test(t)) { setMuted(true); return log("SYSTEM", "Audio muted."); }
+            if (/^(unmute|speak again)\b/.test(t)) { setMuted(false); return speak("Audio restored."); }
+            if (/^(stop|cancel)\b/.test(t)) { if (synth) synth.cancel(); return log("SYSTEM", "Speech stopped."); }
+            if (/\b(open|launch|call|text|message|turn on|turn off|flashlight|torch|wifi|bluetooth)\b/.test(t)) {
+                return speak("I cannot control your phone or other apps from a web page. Phone control needs a native app on the device.");
+            }
+            askGemini(text);
+        }
+
+        async function askGemini(prompt) {
+            const key = apiKeyEl.value.trim();
+            const model = modelEl.value.trim() || "gemini-2.0-flash";
+            if (!key) return speak("Please enter your Gemini API key first.");
+
+            log("SYSTEM", "Querying Gemini...");
+            try {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-goog-api-key": key
+                        },
+                        body: JSON.stringify({
+                            systemInstruction: {
+                                parts: [{ text: "You are JARVIS, a calm, precise and lightly witty AI assistant. Keep replies short and clear, two or three sentences unless the user asks for detail." }]
+                            },
+                            contents: [{ role: "user", parts: [{ text: prompt }] }]
+                        })
+                    }
+                );
+                if (!res.ok) {
+                    const detail = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${detail.slice(0, 200)}`);
+                }
+                const data = await res.json();
+                const reply = (data.candidates?.[0]?.content?.parts || [])
+                    .map(p => p.text || "").join("").trim();
+                speak(reply || "I have no response for that.");
+            } catch (err) {
+                log("SYSTEM", "Gemini error: " + err.message);
+            }
+        }
+
+        if (SR) {
+            recognition = new SR();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = "en-US";
+
+            recognition.onresult = e => handleCommand(e.results[0][0].transcript);
+            recognition.onerror = e => log("SYSTEM", "Voice error: " + e.error);
+            recognition.onend = () => {
+                listening = false;
+                btnListen.classList.remove("active");
+                btnListen.textContent = "Listen";
+            };
+        }
+
+        btnStart.addEventListener("click", activate);
+
+        btnMute.addEventListener("click", () => {
+            setMuted(!muted);
+            log("SYSTEM", muted ? "Audio muted." : "Audio on.");
+        });
+
+        btnListen.addEventListener("click", () => {
+            if (!recognition) return;
+            if (listening) { recognition.stop(); return; }
+            listening = true;
+            btnListen.classList.add("active");
+            btnListen.textContent = "Listening";
+            try { recognition.start(); } catch (_) { /* already started */ }
+        });
+
+        function sendText() {
+            const v = textInput.value;
+            textInput.value = "";
+            handleCommand(v);
+        }
+        btnSend.addEventListener("click", sendText);
+        textInput.addEventListener("keydown", e => { if (e.key === "Enter") sendText(); });
+
+        log("SYSTEM", "Press Activate JARVIS to begin.");
+    </script>
+</body>
+</html>
